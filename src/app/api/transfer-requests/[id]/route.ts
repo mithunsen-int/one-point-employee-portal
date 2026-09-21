@@ -75,13 +75,29 @@ export async function GET(request: NextRequest, context: RouteContext) {
     authResult.identity.role === "Facilities" &&
     transferRequest.status === "Pending: Payroll, IT, Facilities" &&
     transferRequest.facilitiesTaskStatus === "Pending";
+  // HOTFIX-2026-0921-stakeholder-lost-view-after-action (AC19, amended a
+  // third time): every check above only ever covers "can I currently act" —
+  // the moment a stakeholder acts, status moves on and they lose all view
+  // access to a request they were legitimately involved in. This carve-out
+  // is read-only and scoped to the specific person via the audit trail (not
+  // their whole role) — it never grants or implies any action eligibility,
+  // which stays exactly as each action endpoint already independently
+  // enforces. Guarded by Types.ObjectId.isValid: a malformed/placeholder
+  // userId (never possible for a real authenticated caller, but exercised
+  // by several existing tests' negative-case fixtures) must not crash the
+  // query — it simply can't have a real audit entry.
+  const isHistoricalActor =
+    ["Manager", "HR", "Payroll", "IT", "Facilities"].includes(authResult.identity.role) &&
+    Types.ObjectId.isValid(authResult.identity.userId) &&
+    (await AuditLog.exists({ transferRequestId: id, actorId: authResult.identity.userId })) !== null;
   const isEligibleViewer =
     isOwningEmployee ||
     isAssignedManagerOnPendingRequest ||
     isEligibleHr ||
     isEligiblePayroll ||
     isEligibleIt ||
-    isEligibleFacilities;
+    isEligibleFacilities ||
+    isHistoricalActor;
   if (!isEligibleViewer) {
     return NextResponse.json(
       { error: { code: "FORBIDDEN", message: "You may only view your own transfer request." } },

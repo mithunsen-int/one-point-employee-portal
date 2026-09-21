@@ -251,6 +251,110 @@ describe("GET /transfer-requests/{id} — internal-transfer-workflow.T12/AC19 ca
   });
 });
 
+describe("GET /transfer-requests/{id} — HOTFIX-2026-0921-stakeholder-lost-view-after-action/AC19 (3rd amendment): historical-actor carve-out", () => {
+  it("a Manager who already approved (audit entry exists) can still view the request after status moved on", async () => {
+    const { transferRequest, manager } = await createRequest("Pending: HR");
+    await AuditLog.create({
+      transferRequestId: transferRequest._id,
+      actorId: manager._id,
+      actorRole: "Manager",
+      action: "manager_approved",
+      timestamp: new Date(),
+    });
+
+    const { status, json } = await callGet(transferRequest._id.toString(), manager._id.toString(), "Manager");
+    expect(status).toBe(200);
+    expect(json.status).toBe("Pending: HR");
+  });
+
+  it("an HR user who already approved can still view the request once it's Pending: Payroll, IT, Facilities", async () => {
+    const { transferRequest } = await createRequest("Pending: Payroll, IT, Facilities");
+    const hrUserId = new Types.ObjectId();
+    await AuditLog.create({
+      transferRequestId: transferRequest._id,
+      actorId: hrUserId,
+      actorRole: "HR",
+      action: "hr_approved",
+      timestamp: new Date(),
+    });
+
+    const { status } = await callGet(transferRequest._id.toString(), hrUserId.toString(), "HR");
+    expect(status).toBe(200);
+  });
+
+  it("a Payroll user who already completed their task can still view the request once it's Pending: Transfer", async () => {
+    const { transferRequest } = await createRequest("Pending: Transfer", {
+      payrollTaskStatus: "Completed",
+      itTaskStatus: "Completed",
+      facilitiesTaskStatus: "Completed",
+    });
+    const payrollUserId = new Types.ObjectId();
+    await AuditLog.create({
+      transferRequestId: transferRequest._id,
+      actorId: payrollUserId,
+      actorRole: "Payroll",
+      action: "payroll_task_completed",
+      timestamp: new Date(),
+    });
+
+    const { status } = await callGet(transferRequest._id.toString(), payrollUserId.toString(), "Payroll");
+    expect(status).toBe(200);
+  });
+
+  it("a different HR user with no audit entry on this request still gets 403 (person-specific, not role-blanket)", async () => {
+    const { transferRequest } = await createRequest("Pending: Payroll, IT, Facilities");
+    const actingHrUserId = new Types.ObjectId();
+    await AuditLog.create({
+      transferRequestId: transferRequest._id,
+      actorId: actingHrUserId,
+      actorRole: "HR",
+      action: "hr_approved",
+      timestamp: new Date(),
+    });
+
+    const { status } = await callGet(transferRequest._id.toString(), new Types.ObjectId().toString(), "HR");
+    expect(status).toBe(403);
+  });
+
+  it("a Manager who already approved can still view the request once it has reached the terminal Completed status", async () => {
+    const { transferRequest, manager } = await createRequest("Completed", {
+      payrollTaskStatus: "Completed",
+      itTaskStatus: "Completed",
+      facilitiesTaskStatus: "Completed",
+    });
+    await AuditLog.create({
+      transferRequestId: transferRequest._id,
+      actorId: manager._id,
+      actorRole: "Manager",
+      action: "manager_approved",
+      timestamp: new Date(),
+    });
+
+    const { status, json } = await callGet(transferRequest._id.toString(), manager._id.toString(), "Manager");
+    expect(status).toBe(200);
+    expect(json.status).toBe("Completed");
+  });
+
+  it("the HR user who performed the final mapping (the action that sets Completed) can still view the request afterward", async () => {
+    const { transferRequest } = await createRequest("Completed", {
+      payrollTaskStatus: "Completed",
+      itTaskStatus: "Completed",
+      facilitiesTaskStatus: "Completed",
+    });
+    const hrUserId = new Types.ObjectId();
+    await AuditLog.create({
+      transferRequestId: transferRequest._id,
+      actorId: hrUserId,
+      actorRole: "HR",
+      action: "hr_final_mapping",
+      timestamp: new Date(),
+    });
+
+    const { status } = await callGet(transferRequest._id.toString(), hrUserId.toString(), "HR");
+    expect(status).toBe(200);
+  });
+});
+
 describe("GET /transfer-requests/{id} — not found and authentication", () => {
   it("a non-existent id responds 404", async () => {
     const { status, json } = await callGet(new Types.ObjectId().toString(), "employee-1", "Employee");

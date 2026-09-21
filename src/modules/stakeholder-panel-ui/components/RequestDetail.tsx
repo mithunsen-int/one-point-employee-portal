@@ -64,7 +64,12 @@ export function RequestDetail({ id }: RequestDetailProps) {
         )}
       </section>
 
-      {data.status === "Pending: Manager" && (
+      {/* HOTFIX-2026-0921-stakeholder-lost-view-after-action: missing role
+          check meant any non-Employee viewer eligible to see a Pending:
+          Manager request (e.g. the assigned Manager) also saw a Withdraw
+          button that isn't theirs — the server-side endpoint was always
+          correctly Employee-only, this is a display-only fix. */}
+      {readSession()?.role === "Employee" && data.status === "Pending: Manager" && (
         <Button type="button" variant="destructive" onClick={() => withdrawMutation.mutate()}>
           Withdraw
         </Button>

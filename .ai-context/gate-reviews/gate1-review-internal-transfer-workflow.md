@@ -86,3 +86,30 @@ Approved — plan drafting may begin.
 ### Outcome
 
 **Verdict:** Approved (Test Reviewer, 2026-09-20). `AC13`/`AC14`/`AC18`/`AC22`'s amended wording and the new `AC25` stand as the spec's contract. `internal-transfer-workflow.T13`'s own Gate 2 verdict (code review) remains separately required before Merge — this re-confirmation covers the spec-content change only, not the implementation.
+
+---
+
+## Re-confirmation — AC19 (third amendment), AC21/AC22/AC23 (one amendment each), via HOTFIX-2026-0921-stakeholder-lost-view-after-action (2026-09-21)
+
+**Reviewer:** Test Reviewer
+**Date:** 2026-09-21
+**Change reviewed:** `internal-transfer-workflow.spec.md`'s `AC19` (third amendment) and `AC21`–`AC23` (one amendment each), all part of the same hotfix — scoped to these four AC changes only, not a full spec re-review.
+
+**Origin:** two rounds of real usage found via `HOTFIX-2026-0921-stakeholder-lost-view-after-action`. First, a stakeholder (Manager/HR/Payroll/IT/Facilities) permanently lost the ability to even view a request the moment they acted on it — `AC19`'s "currently-relevant assigned stakeholder" wording never covered a stakeholder who already acted, only one who hasn't yet. Amended `AC19` a third time to add a historical-actor carve-out: any such user with a real `AuditLog` entry recording their own prior action on that specific request may still view it, permanently, regardless of current status, read-only. Second, after that fix shipped, the user reported the same `Completed` request had become undiscoverable in HR's "My Requests" list — root-caused to `GET /transfer-requests/mine` (`API10`, governed by `AC21`–`AC23`) never having received the same carve-out, and confirmed that list is `AC2c`'s only navigation path into the detail screen the first fix touched. Amended `AC21` (Manager), `AC22` (HR), and `AC23` (Payroll/IT/Facilities) to each add the identical historical-actor carve-out `AC19` already defines, rather than inventing a new rule. Implemented directly in this same hotfix: `isHistoricalActor` in `[id]/route.ts` (`API02`) and `auditedRequestIds()` in `mine/route.ts` (`API10`), both scoped to the specific person via the audit trail, not their whole role. Both Green — 649/649 project-wide, `tsc`/`eslint`/`next build` all clean — with the hotfix's own Gate 2 evidence drafted in its own spec file (`.ai-context/hotfixes/hotfix-2026-0921-stakeholder-lost-view-after-action.spec.md`), itself still awaiting a Gate 2 verdict at the time of this re-confirmation.
+
+### Checklist Walkthrough (scoped to the amendments)
+
+- [x] 1. Reviewer ≠ author
+- [x] 2. Each amended AC is still one unambiguous given/when/then, individually IDed
+- [x] 3. `AC21`–`AC23`'s carve-outs reuse the identical rule `AC19` already defines, rather than introducing new, unreviewed logic; `AC19` itself is amended consistently with its own prior two amendments
+- [x] 4. `UT21a`/`UT22a`/`UT23a` added to the spec's test table for the list-view carve-out; `AC19`'s own historical-actor test cases already existed from its prior amendment
+- [x] 5. No unrelated AC or scope was touched under cover of this change — `AC20` (Employee, already unconditional) and `AC24` (Admin, always 403) confirmed untouched
+- [x] 6. Status decision made — Approved
+
+### Findings
+
+(none — both amendments are a narrow, consistent extension of an already-approved rule to a second endpoint with the identical need, not a new policy)
+
+### Outcome
+
+**Verdict:** Approved (Test Reviewer, 2026-09-21). `AC19`'s third amendment and `AC21`–`AC23`'s amended wording stand as the spec's contract. The hotfix's own Gate 2 verdict (code review, covering all three of its bundled fixes) remains separately required before it can be marked Merged — this re-confirmation covers the spec-content changes only, not the implementation.

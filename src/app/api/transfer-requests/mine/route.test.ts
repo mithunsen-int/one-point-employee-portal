@@ -5,6 +5,7 @@ import { User } from "@/services/users/User";
 import { Department } from "@/services/org-structure/Department";
 import { JobRole } from "@/services/org-structure/JobRole";
 import { TransferRequest, TransferRequestStatus } from "@/services/workflow/TransferRequest";
+import { AuditLog } from "@/services/audit/AuditLog";
 import { Types } from "mongoose";
 
 const ORIGINAL_ENV = process.env;
@@ -16,6 +17,7 @@ beforeAll(async () => {
   await Department.init();
   await JobRole.init();
   await TransferRequest.init();
+  await AuditLog.init();
 }, 60000);
 
 afterEach(async () => {
@@ -214,6 +216,104 @@ describe("GET /transfer-requests/mine — AC23/UT23: Payroll/IT/Facilities see o
 
     expect(json).toHaveLength(1);
     expect(json[0].id).toBe(pending._id.toString());
+  });
+});
+
+describe("GET /transfer-requests/mine — HOTFIX-2026-0921-stakeholder-lost-view-after-action/AC21–AC23 (amended): historical-actor carve-out", () => {
+  it("UT21a: a Manager who already approved a now-Completed request still sees it in the list", async () => {
+    const managerId = new Types.ObjectId().toString();
+    const completed = await createRequest({
+      employeeId: new Types.ObjectId().toString(),
+      assignedManagerId: new Types.ObjectId().toString(),
+      status: "Completed",
+      payrollTaskStatus: "Completed",
+      itTaskStatus: "Completed",
+      facilitiesTaskStatus: "Completed",
+    });
+    await AuditLog.create({
+      transferRequestId: completed._id,
+      actorId: managerId,
+      actorRole: "Manager",
+      action: "manager_approved",
+      timestamp: new Date(),
+    });
+
+    const { status, json } = await callMine("Manager", managerId);
+
+    expect(status).toBe(200);
+    expect(json.map((r: { id: string }) => r.id)).toContain(completed._id.toString());
+  });
+
+  it("UT22a: an HR user who performed the final mapping on a now-Completed request still sees it in the list", async () => {
+    const hrUserId = new Types.ObjectId().toString();
+    const completed = await createRequest({
+      employeeId: new Types.ObjectId().toString(),
+      assignedManagerId: new Types.ObjectId().toString(),
+      status: "Completed",
+      payrollTaskStatus: "Completed",
+      itTaskStatus: "Completed",
+      facilitiesTaskStatus: "Completed",
+    });
+    await AuditLog.create({
+      transferRequestId: completed._id,
+      actorId: hrUserId,
+      actorRole: "HR",
+      action: "hr_final_mapping",
+      timestamp: new Date(),
+    });
+
+    const { status, json } = await callMine("HR", hrUserId);
+
+    expect(status).toBe(200);
+    expect(json.map((r: { id: string }) => r.id)).toContain(completed._id.toString());
+  });
+
+  it("UT23a: a Payroll user who already completed their task on a now-Completed request still sees it in the list", async () => {
+    const payrollUserId = new Types.ObjectId().toString();
+    const completed = await createRequest({
+      employeeId: new Types.ObjectId().toString(),
+      assignedManagerId: new Types.ObjectId().toString(),
+      status: "Completed",
+      payrollTaskStatus: "Completed",
+      itTaskStatus: "Completed",
+      facilitiesTaskStatus: "Completed",
+    });
+    await AuditLog.create({
+      transferRequestId: completed._id,
+      actorId: payrollUserId,
+      actorRole: "Payroll",
+      action: "payroll_task_completed",
+      timestamp: new Date(),
+    });
+
+    const { status, json } = await callMine("Payroll", payrollUserId);
+
+    expect(status).toBe(200);
+    expect(json.map((r: { id: string }) => r.id)).toContain(completed._id.toString());
+  });
+
+  it("a different HR user with no audit entry on that request does not see it (person-specific, not role-blanket)", async () => {
+    const actingHrUserId = new Types.ObjectId().toString();
+    const completed = await createRequest({
+      employeeId: new Types.ObjectId().toString(),
+      assignedManagerId: new Types.ObjectId().toString(),
+      status: "Completed",
+      payrollTaskStatus: "Completed",
+      itTaskStatus: "Completed",
+      facilitiesTaskStatus: "Completed",
+    });
+    await AuditLog.create({
+      transferRequestId: completed._id,
+      actorId: actingHrUserId,
+      actorRole: "HR",
+      action: "hr_final_mapping",
+      timestamp: new Date(),
+    });
+
+    const { status, json } = await callMine("HR", new Types.ObjectId().toString());
+
+    expect(status).toBe(200);
+    expect(json.map((r: { id: string }) => r.id)).not.toContain(completed._id.toString());
   });
 });
 

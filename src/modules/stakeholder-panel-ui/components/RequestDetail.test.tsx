@@ -105,6 +105,16 @@ describe("RequestDetail — stakeholder-panel-ui.AC5/UT05: Withdraw, shown only 
     await screen.findByText(/Pending: HR/);
     expect(screen.queryByRole("button", { name: /withdraw/i })).not.toBeInTheDocument();
   });
+
+  it("HOTFIX-2026-0921-stakeholder-lost-view-after-action: does not show Withdraw for a non-Employee viewer, even while Pending: Manager", async () => {
+    loginAs("Manager");
+    mockedFetchRequestDetail.mockResolvedValue(pendingManagerDetail);
+
+    renderWithQueryClient("req-1");
+
+    await screen.findByText(/Pending: Manager/);
+    expect(screen.queryByRole("button", { name: /withdraw/i })).not.toBeInTheDocument();
+  });
 });
 
 describe("RequestDetail — stakeholder-panel-ui.AC6/T06: Manager Decision panel shown only for the assigned Manager", () => {
