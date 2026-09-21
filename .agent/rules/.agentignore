@@ -1,0 +1,48 @@
+# ==========================================
+# INT React AI Agent Ignore File
+# ==========================================
+
+# 1. Heavy dependencies and lock files
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# 2. Build artifacts and caches
+dist/
+build/
+out/
+.next/
+coverage/
+.cache/
+.storybook-static/
+
+# 3. Environment variables and secrets
+.env
+.env.*
+*.pem
+*.key
+credentials.json
+secrets/
+
+# 4. Logs and local db files
+logs/
+*.log
+npm-debug.log*
+*.sqlite
+*.db
+
+# 5. Binary assets and generated media
+public/assets/
+images/
+*.svg
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.mp4
+*.ico
+
+# 6. AI audit trail
+.ai-context/prompt_history.md
