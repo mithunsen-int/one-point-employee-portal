@@ -60,6 +60,10 @@ prompts/      → one thin @-mentionable prompt file per workflow (no slash comm
   changed_requests/        → lightweight, spec-styled write-ups for a real gap or improvement (e.g. found during
                              Gate 2) that isn't a defect (so no hotfix/bug-fix spec) and isn't ADR-significant
                              (so no ADR) — parked here as Status: Proposed until picked up as a real task
+  hotfixes/                → HOTFIX-<incident-slug>.spec.md files (#24) — the compressed spec chain for a
+                             production incident, kept separate from specs/ since a hotfix's lifecycle
+                             (Emergency-Merged → Retro-Documented) and its own Related field (pointing back to
+                             the specs it patches) don't fit the normal per-feature artefact chain
 ```
 
 ## Naming (sdd-methodology.md #9)
